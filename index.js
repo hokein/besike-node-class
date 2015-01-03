@@ -1,8 +1,10 @@
 Class = function(func, par) {
   var class_constructor = function() {};
+  class_constructor.__super__ = Object;
   if ('initialize' in func)
     class_constructor = func['initialize'];
   if (par) {
+    class_constructor.__super__ = par;
     class_constructor.prototype = new par();
     class_constructor.prototype.constructor = class_constructor;
   }
