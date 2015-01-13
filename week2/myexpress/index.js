@@ -1,4 +1,5 @@
 var http = require('http');
+var Layer = require('./lib/layer');
 
 function isErrorHandler(func) {
   return func.length >= 4;
@@ -16,14 +17,17 @@ module.exports = function() {
           res.end('');
         }
       } else {
-        var middleware = requestListener.stack[currentPos];
+        var layer = requestListener.stack[currentPos];
+        var middleware = layer.handle;
         ++currentPos;
         try {
-          // If an error occurred, skip all subapps also.
-          if (err && isErrorHandler(middleware))
+          if (!layer.match(req.url))
+            next(err);
+          else if (err && isErrorHandler(middleware))
+            // If an error occurred, skip all subapps also.
             middleware(err, req, res, next);
-          // call next middleware or subapp
           else if (!err && !isErrorHandler(middleware))
+            // call next middleware or subapp
             middleware(req, res, next);
           else // skip to next middleware
             next(err);
@@ -42,8 +46,11 @@ module.exports = function() {
     server.listen.apply(server, arguments);
     return server;
   }
-  requestListener.use = function(middleware) {
-    requestListener.stack.push(middleware);
+  requestListener.use = function() {
+    if (arguments.length == 1)
+      requestListener.stack.push(new Layer('/', arguments[0]));
+    else
+      requestListener.stack.push(new Layer(arguments[0], arguments[1]));
     return requestListener;
   }
   return requestListener;
