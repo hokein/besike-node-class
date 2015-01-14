@@ -21,9 +21,13 @@ module.exports = function() {
         var middleware = layer.handle;
         ++currentPos;
         try {
-          if (!layer.match(req.url))
+          var result = layer.match(req.url);
+          if (!result) {
             next(err);
-          else if (err && isErrorHandler(middleware))
+            return;
+          }
+          req.params = result.params;
+          if (err && isErrorHandler(middleware))
             // If an error occurred, skip all subapps also.
             middleware(err, req, res, next);
           else if (!err && !isErrorHandler(middleware))
