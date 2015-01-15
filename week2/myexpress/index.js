@@ -1,5 +1,7 @@
 var http = require('http');
 var Layer = require('./lib/layer');
+var makeRoute = require('./lib/route');
+var methods = require("methods");
 
 function isErrorHandler(func) {
   return func.length >= 4;
@@ -16,11 +18,18 @@ module.exports = function() {
     server.listen.apply(server, arguments);
     return server;
   }
+  methods.forEach(function(method) {
+    requestListener[method] = function(path, handler) {
+      requestListener.stack.push(new Layer(path, makeRoute(method.toUpperCase(),
+          handler), {end:true}));
+    }
+  });
   requestListener.use = function() {
     if (arguments.length == 1)
-      requestListener.stack.push(new Layer('/', arguments[0]));
+      requestListener.stack.push(new Layer('/', arguments[0], {end: false}));
     else
-      requestListener.stack.push(new Layer(arguments[0], arguments[1]));
+      requestListener.stack.push(new Layer(arguments[0], arguments[1],
+          {end: false}));
     return requestListener;
   }
   requestListener.handle = function(req, res, parentNext) {

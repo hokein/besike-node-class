@@ -2,12 +2,12 @@ var pathToRegexp = require('path-to-regexp');
 
 module.exports = Layer;
 
-function Layer(path, middleware) {
+function Layer(path, middleware, options) {
   this.keys = [];
   if (path[path.length-1] == '/')
-    this.re = pathToRegexp(path.slice(0,-1), this.keys, {end: false});
+    this.re = pathToRegexp(path.slice(0,-1), this.keys, options);
   else
-    this.re = pathToRegexp(path, this.keys, {end: false});
+    this.re = pathToRegexp(path, this.keys, options);
   this.handle = middleware;
 }
 

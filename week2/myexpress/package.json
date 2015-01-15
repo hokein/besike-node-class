@@ -12,5 +12,8 @@
     "supertest": "^0.10.0"
   },
   "author": "hokein",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "methods": "^0.1.0"
+  }
 }
