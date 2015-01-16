@@ -18,12 +18,6 @@ module.exports = function() {
     server.listen.apply(server, arguments);
     return server;
   }
-  methods.forEach(function(method) {
-    requestListener[method] = function(path, handler) {
-      requestListener.stack.push(new Layer(path, makeRoute(method.toUpperCase(),
-          handler), {end:true}));
-    }
-  });
   requestListener.use = function() {
     if (arguments.length == 1)
       requestListener.stack.push(new Layer('/', arguments[0], {end: false}));
@@ -31,6 +25,11 @@ module.exports = function() {
       requestListener.stack.push(new Layer(arguments[0], arguments[1],
           {end: false}));
     return requestListener;
+  }
+  requestListener.route = function(path) {
+    var layer = new Layer(path, makeRoute());
+    requestListener.stack.push(new Layer(path, layer));
+    return layer.handle;
   }
   requestListener.handle = function(req, res, parentNext) {
     var currentPos = 0;
@@ -75,6 +74,16 @@ module.exports = function() {
       }
     }
     next();
+  }
+  methods.forEach(function(method) {
+    requestListener[method] = function(path, handler) {
+      requestListener.route(path)[method](handler);
+      return requestListener;
+    }
+  });
+  requestListener['all'] = function(path, handler) {
+    requestListener.route(path)['all'](handler);
+    return requestListener;
   }
   return requestListener;
 };
