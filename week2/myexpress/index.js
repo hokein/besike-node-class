@@ -1,7 +1,8 @@
 var http = require('http');
 var Layer = require('./lib/layer');
 var makeRoute = require('./lib/route');
-var methods = require("methods");
+var methods = require('methods');
+var inject = require('./lib/injector');
 
 function isErrorHandler(func) {
   return func.length >= 4;
@@ -84,6 +85,14 @@ module.exports = function() {
   requestListener['all'] = function(path, handler) {
     requestListener.route(path)['all'](handler);
     return requestListener;
+  }
+  requestListener._factories = {}
+  requestListener.factory = function(name, func) {
+    requestListener._factories[name] = func;
+    return requestListener
+  }
+  requestListener.inject = function(func) {
+    return inject(func, requestListener);
   }
   return requestListener;
 };
