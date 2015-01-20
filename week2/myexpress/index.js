@@ -3,6 +3,8 @@ var Layer = require('./lib/layer');
 var makeRoute = require('./lib/route');
 var methods = require('methods');
 var inject = require('./lib/injector');
+var requestProto = require('./lib/request');
+var responseProto = require('./lib/response');
 
 function isErrorHandler(func) {
   return func.length >= 4;
@@ -10,6 +12,19 @@ function isErrorHandler(func) {
 
 module.exports = function() {
   var requestListener = function(req, res, parentNext) {
+    req.app = requestListener;
+    req.res = res;
+    res.req = req;
+    res.redirect = function() {
+      if (arguments.length == 1) {
+        res.writeHead(302, {'Location': arguments[0], 'Content-length': 0});
+      } else {
+        res.writeHead(arguments[0], {'Location': arguments[1],
+            'Content-length': 0});
+      }
+      res.end('');
+    }
+    requestListener.monkey_patch(req, res);
     requestListener.handle(req, res, parentNext);
   }
 
@@ -38,6 +53,7 @@ module.exports = function() {
       if (currentPos >= requestListener.stack.length) {
         if (parentNext) {
           req.url = req.url_bak;
+          req.app = req.app_bak;
           parentNext(err);
         } else {
           res.statusCode = err? 500:404;
@@ -62,8 +78,11 @@ module.exports = function() {
             if (middleware.handle) {
               req.url_bak = req.url;
               req.url = req.url.slice(result.path.length);
+              req.app_bak = requestListener;
+              req.app = middleware;
               middleware.handle(req, res, next);
             } else {
+              //req.app = requestListener;
               middleware(req, res, next);
             }
           else // skip to next middleware
@@ -93,6 +112,14 @@ module.exports = function() {
   }
   requestListener.inject = function(func) {
     return inject(func, requestListener);
+  }
+  requestListener.monkey_patch = function(req, res) {
+    var req_proto = requestProto();
+    var res_proto = responseProto();
+    req_proto.__proto__ = req.__proto__;
+    req.__proto__ = req_proto;
+    res_proto.__proto__ = res.__proto__;
+    res.__proto__ = res_proto;
   }
   return requestListener;
 };
