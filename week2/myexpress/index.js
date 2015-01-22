@@ -2,8 +2,6 @@ var http = require('http');
 var Layer = require('./lib/layer');
 var makeRoute = require('./lib/route');
 var methods = require('methods');
-var mime = require('mime');
-var accepts = require('accepts');
 var inject = require('./lib/injector');
 var requestProto = require('./lib/request');
 var responseProto = require('./lib/response');
@@ -15,36 +13,6 @@ function isErrorHandler(func) {
 module.exports = function() {
   var requestListener = function(req, res, parentNext) {
     req.app = requestListener;
-    req.res = res;
-    res.req = req;
-    res.redirect = function() {
-      if (arguments.length == 1) {
-        res.writeHead(302, {'Location': arguments[0], 'Content-length': 0});
-      } else {
-        res.writeHead(arguments[0], {'Location': arguments[1],
-            'Content-length': 0});
-      }
-      res.end('');
-    }
-    res.type = function(t) {
-      res.setHeader('Content-Type', mime.lookup(t));
-    }
-    res.default_type = function(t) {
-      if (!res.getHeader('Content-Type'))
-        res.type(t);
-    }
-    res.format = function(dict) {
-      var accept = accepts(req);
-      var prefer_type = accept.types(Object.keys(dict));
-      if (prefer_type in dict) {
-        res.type(prefer_type);
-        dict[prefer_type]();
-      } else {
-        var err = new Error("Not Acceptable");
-        err.statusCode = 406;
-        throw err;
-      }
-    }
     requestListener.monkey_patch(req, res);
     requestListener.handle(req, res, parentNext);
   }
@@ -137,6 +105,8 @@ module.exports = function() {
   requestListener.monkey_patch = function(req, res) {
     req.__proto__ = requestProto;
     res.__proto__ = responseProto;
+    req.res = res;
+    res.req = req;
   }
   return requestListener;
 };
