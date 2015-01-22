@@ -135,12 +135,8 @@ module.exports = function() {
     return inject(func, requestListener);
   }
   requestListener.monkey_patch = function(req, res) {
-    var req_proto = requestProto();
-    var res_proto = responseProto();
-    req_proto.__proto__ = req.__proto__;
-    req.__proto__ = req_proto;
-    res_proto.__proto__ = res.__proto__;
-    res.__proto__ = res_proto;
+    req.__proto__ = requestProto;
+    res.__proto__ = responseProto;
   }
   return requestListener;
 };

@@ -1,5 +1,6 @@
-module.exports = function() {
-  var proto = {}
-  proto.isExpress = true;
-  return proto;
-};
+var http = require('http');
+
+var proto = { isExpress: true };
+proto.__proto__ = http.ServerResponse.prototype;
+
+module.exports = proto;
