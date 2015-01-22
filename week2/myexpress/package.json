@@ -14,6 +14,8 @@
   "author": "hokein",
   "license": "MIT",
   "dependencies": {
-    "methods": "^0.1.0"
+    "accepts": "^1.0.1",
+    "methods": "^0.1.0",
+    "mime": "^1.2.11"
   }
 }
