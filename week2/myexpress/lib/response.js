@@ -2,6 +2,9 @@ var http = require('http');
 var mime = require('mime');
 var accepts = require('accepts');
 var crc32 = require('buffer-crc32');
+var fs = require('fs');
+var path = require('path');
+var rparser = require('range-parser');
 
 function isBuffer(str) {
   return str && typeof str === "object" && Buffer.isBuffer(str)
@@ -71,6 +74,64 @@ var proto = {
       return;
     }
     this.end(data);
+  },
+  stream: function(s) {
+    var that = this;
+    s.on('data', function(chunk) {
+      if (!that.write(chunk)) {
+        s.pause();
+        that.once('drain', function() {
+          s.resume();
+        });
+      }
+    });
+    s.on('end', function() {
+      that.end();
+    });
+  },
+  sendfile: function(data_path, options) {
+    var that = this;
+    that.setHeader('Accept-Ranges', 'bytes');
+    if (options && options['root'])
+      data_path = path.join(options['root'], data_path);
+    if (data_path.indexOf('..') != -1) {
+      console.log(123)
+      that.statusCode = 403;
+      that.end();
+      return;
+    }
+    fs.stat(data_path, function(err, stats) {
+      if (err) {
+        that.statusCode = 404;
+        that.end();
+        return;
+      }
+      if (stats.isDirectory()) {
+        that.statusCode = 403;
+        that.end();
+        return;
+      }
+      var size = stats.size;
+      var options = {};
+      if (that.req.headers.range) {
+        var range = rparser(stats.size, that.req.headers.range);
+        if (range == -1) { // unsatisfiable range
+          that.statusCode = 416;
+          that.end();
+          return;
+        }
+        if (range != -2) { // valid range
+          options = range[0];
+          size = options.end - options.start+1;
+          that.statusCode = 206;
+          that.setHeader('Content-Range',
+              'bytes ' + options.start + '-' + options.end + '/' + stats.size);
+        }
+      }
+      that.setHeader('Content-length', size);
+      that.setHeader('Content-type', 'text/plain');
+      that.stream(fs.createReadStream(data_path, options));
+    });
   }
 };
 
